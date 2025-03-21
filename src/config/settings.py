@@ -23,16 +23,36 @@ class Settings(BaseSettings):
             if 'google' in st.secrets and 'credentials' in st.secrets['google']:
                 # The credentials in Streamlit secrets might be a JSON string or already parsed
                 creds = st.secrets['google']['credentials']
+                
+                # If it's a string, try to parse it as JSON
                 if isinstance(creds, str):
                     try:
-                        return json.loads(creds)
+                        creds_dict = json.loads(creds)
                     except json.JSONDecodeError:
                         # If it's not valid JSON, it might be a raw string that needs cleanup
-                        # Remove any extra quotes, newlines, etc.
                         creds = creds.strip().replace('\n', '\\n')
-                        return json.loads(creds)
+                        try:
+                            creds_dict = json.loads(creds)
+                        except json.JSONDecodeError:
+                            print("Failed to parse credentials string as JSON")
+                            return {}
                 elif isinstance(creds, dict):
-                    return creds
+                    creds_dict = creds
+                else:
+                    print(f"Unexpected credentials type: {type(creds)}")
+                    return {}
+                
+                # Check if private_key is truncated (contains "...")
+                if "private_key" in creds_dict and "..." in creds_dict["private_key"]:
+                    print("Warning: private_key appears to be truncated. This will cause authentication errors.")
+                    
+                # Ensure private_key is properly formatted
+                if "private_key" in creds_dict and not creds_dict["private_key"].startswith("-----BEGIN PRIVATE KEY-----"):
+                    # Try to fix the format if it's missing the header/footer
+                    if "PRIVATE KEY" not in creds_dict["private_key"]:
+                        creds_dict["private_key"] = f"-----BEGIN PRIVATE KEY-----\n{creds_dict['private_key']}\n-----END PRIVATE KEY-----"
+                
+                return creds_dict
         except (ImportError, KeyError, json.JSONDecodeError) as e:
             print(f"Error accessing Streamlit secrets: {e}")
             pass

@@ -125,11 +125,3 @@ If you encounter issues with the DeepSeek API:
 1. Verify your API key is correct
 2. Check your internet connection
 3. Ensure you're not exceeding API rate limits
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-[Specify your license here]

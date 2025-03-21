@@ -7,20 +7,28 @@ from typing import Dict, List
 class SheetsClient:
     def __init__(self, credentials_path: str):
         from ..config.settings import settings
+        import traceback
         
         scope = ['https://www.googleapis.com/auth/spreadsheets.readonly']
         
-        # Get credentials from settings
-        credentials_dict = settings.get_credentials_dict()
-        
-        if credentials_dict:
+        try:
+            # Get credentials from settings
+            credentials_dict = settings.get_credentials_dict()
+            
+            if not credentials_dict:
+                raise ValueError("No credentials found in Streamlit secrets or local file")
+                
+            if "private_key" not in credentials_dict:
+                raise ValueError(f"Missing 'private_key' in credentials. Keys found: {list(credentials_dict.keys())}")
+                
             # Use credentials from dictionary (either Streamlit secrets or local file)
             creds = Credentials.from_service_account_info(credentials_dict, scopes=scope)
-        else:
-            # Fallback to file-based credentials if method above failed
-            creds = Credentials.from_service_account_file(credentials_path, scopes=scope)
-            
-        self.client = gspread.authorize(creds)
+            self.client = gspread.authorize(creds)
+        except Exception as e:
+            error_msg = f"Error initializing SheetsClient: {str(e)}\n{traceback.format_exc()}"
+            print(error_msg)
+            # Re-raise with more context
+            raise RuntimeError(f"Failed to initialize Google Sheets client: {str(e)}") from e
 
     def get_sheet_data(self, sheet_id: str) -> List[Dict]:
         sheet = self.client.open_by_key(sheet_id)
